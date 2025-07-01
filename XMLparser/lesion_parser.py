@@ -124,17 +124,24 @@ class LesionXMLParser:
                                 else:
                                     continue
 
+                            radius = radius_x = radius_y = angle = None
+
                             if region.tag == "circleregion":
                                 radius_elem = region.find("radius")
-                                radius = float(radius_elem.text) if radius_elem is not None else None
+                                if radius_elem is not None:
+                                    radius = float(radius_elem.text)
+                                    # radius_x = radius_y = radius
+                                    # angle = 0.0
 
                             elif region.tag == "ellipseregion":
                                 rx_elem = region.find("radius[@direction='x']")
                                 ry_elem = region.find("radius[@direction='y']")
+                                angle_elem = region.find("angle")
                                 if rx_elem is not None and ry_elem is not None:
-                                    radius = (float(rx_elem.text) + float(ry_elem.text)) / 2
-                                else:
-                                    radius = None
+                                    radius_x = float(rx_elem.text)
+                                    radius_y = float(ry_elem.text)
+                                    radius = (radius_x + radius_y) / 2
+                                    angle = float(angle_elem.text) if angle_elem is not None else 0.0
 
                             elif region.tag == "polygonregion":
                                 centroid_text = region.find("centroid/coords2d").text
@@ -144,8 +151,8 @@ class LesionXMLParser:
                                     px, py = map(float, pt.text.split(","))
                                     dist = ((px - cx) ** 2 + (py - cy) ** 2) ** 0.5
                                     radius = max(radius, dist)
-                            else:
-                                radius = None
+                                # radius_x = radius_y = radius
+                                # angle = 0.0
 
                             lesion_type = mark.find("markingtype").text
 
@@ -157,6 +164,9 @@ class LesionXMLParser:
                                 "x": x,
                                 "y": y,
                                 "radius": radius,
+                                "radius_x": radius_x,
+                                "radius_y": radius_y,
+                                "angle": angle,
                                 "region_type": region.tag
                             })
 
