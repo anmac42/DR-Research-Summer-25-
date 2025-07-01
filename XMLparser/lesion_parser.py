@@ -74,7 +74,7 @@ class LesionXMLParser:
         return None
 
 
-    def parse(self, mode="overwrite"):
+    def parse(self, mode="overwrite", mute_output=True):
         # pre:  xml_input is a valid list of .xml paths or dicts; files are accessible from root_dir or absolute paths
         # post: parsed_data is populated with extracted lesion entries, cache is cleared, optionally appends
         # desc: parses all provided XML files and extracts lesion metadata. Supports appending or overwriting previous results.
@@ -111,7 +111,18 @@ class LesionXMLParser:
                         for mark in root.findall(".//marking"):
                             coords_text = mark.find(".//centroid/coords2d").text
                             x, y = map(float, coords_text.split(","))
-                            region = mark.find("./*region")
+                            region = None
+
+                            for child in mark:
+                                if child.tag.endswith("region"):
+                                    region = child
+                                    break
+
+                            if region is None:
+                                if mute_output == False:
+                                    print("INFO: region is None")
+                                else:
+                                    continue
 
                             if region.tag == "circleregion":
                                 radius_elem = region.find("radius")
