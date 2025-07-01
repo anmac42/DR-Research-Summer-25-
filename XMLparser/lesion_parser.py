@@ -100,11 +100,42 @@ class LesionXMLParser:
                         image_id = os.path.splitext(os.path.basename(image_path))[0] if image_path else None
                         xml_name = os.path.basename(xml_path)
 
+                        # note: updated due to different types of regions
+                        #   circleregion
+                        #   polygonregion
+                        #   elipsisregion
+
+                        # note: this severly overestimates the radius for polygon regions, due to the fact it's not given
+                        # !important! = keep track of the region type as you plot stuff, always leave a note
+
                         for mark in root.findall(".//marking"):
                             coords_text = mark.find(".//centroid/coords2d").text
                             x, y = map(float, coords_text.split(","))
-                            radius_elem = mark.find(".//circleregion/radius")
-                            radius = float(radius_elem.text) if radius_elem is not None else None
+                            region = mark.find("./*region")
+
+                            if region.tag == "circleregion":
+                                radius_elem = region.find("radius")
+                                radius = float(radius_elem.text) if radius_elem is not None else None
+
+                            elif region.tag == "ellipseregion":
+                                rx_elem = region.find("radius[@direction='x']")
+                                ry_elem = region.find("radius[@direction='y']")
+                                if rx_elem is not None and ry_elem is not None:
+                                    radius = (float(rx_elem.text) + float(ry_elem.text)) / 2
+                                else:
+                                    radius = None
+
+                            elif region.tag == "polygonregion":
+                                centroid_text = region.find("centroid/coords2d").text
+                                cx, cy = map(float, centroid_text.split(","))
+                                radius = 0
+                                for pt in region.findall("coords2d"):
+                                    px, py = map(float, pt.text.split(","))
+                                    dist = ((px - cx) ** 2 + (py - cy) ** 2) ** 0.5
+                                    radius = max(radius, dist)
+                            else:
+                                radius = None
+
                             lesion_type = mark.find("markingtype").text
 
                             self.parsed_data.append({
@@ -114,7 +145,8 @@ class LesionXMLParser:
                                 "type": lesion_type,
                                 "x": x,
                                 "y": y,
-                                "radius": radius
+                                "radius": radius,
+                                "region_type": region.tag
                             })
 
                     except Exception as e:
