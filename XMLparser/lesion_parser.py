@@ -58,6 +58,7 @@ class LesionXMLParser:
         self._format_cache = {}
         self.parsed_object = None
         self.lock = threading.Lock()
+        self.lesion_counter = 0
 
 
     def _resolve_path(self, path):
@@ -105,9 +106,6 @@ class LesionXMLParser:
                         #   polygonregion
                         #   elipsisregion
 
-                        # note: this severly overestimates the radius for polygon regions, due to the fact it's not given
-                        # !important! = keep track of the region type as you plot stuff, always leave a note
-
                         for mark in root.findall(".//marking"):
                             coords_text = mark.find(".//centroid/coords2d").text
                             x, y = map(float, coords_text.split(","))
@@ -125,6 +123,7 @@ class LesionXMLParser:
                                     continue
 
                             radius = radius_x = radius_y = angle = None
+                            polygon_points = []
 
                             if region.tag == "circleregion":
                                 radius_elem = region.find("radius")
@@ -147,8 +146,11 @@ class LesionXMLParser:
                                 centroid_text = region.find("centroid/coords2d").text
                                 cx, cy = map(float, centroid_text.split(","))
                                 radius = 0
+                                polygon_points = []
+
                                 for pt in region.findall("coords2d"):
                                     px, py = map(float, pt.text.split(","))
+                                    polygon_points.append((px, py))
                                     dist = ((px - cx) ** 2 + (py - cy) ** 2) ** 0.5
                                     radius = max(radius, dist)
                                 # radius_x = radius_y = radius
@@ -161,14 +163,17 @@ class LesionXMLParser:
                                 "image_id": image_id,
                                 "xml_file": xml_name,
                                 "type": lesion_type,
+                                "lesion_id": self.lesion_counter,
                                 "x": x,
                                 "y": y,
                                 "radius": radius,
                                 "radius_x": radius_x,
                                 "radius_y": radius_y,
                                 "angle": angle,
+                                "polygon_points": polygon_points,
                                 "region_type": region.tag
                             })
+                            self.lesion_counter += 1
 
                     except Exception as e:
                         print(f"Skipping {xml_rel} due to error: {e}")
