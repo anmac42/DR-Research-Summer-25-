@@ -12,7 +12,6 @@ The project is organized as follows:
 
 ```
 .
-├── Jakob
 ├── Literature
 │   ├── CNN
 │   ├── DLMedicalImages
